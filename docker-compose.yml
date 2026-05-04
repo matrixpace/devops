@@ -12,10 +12,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /opt/data/caddy/data:/data
       - /opt/data/caddy/config:/config
+      - /opt/data/files/srv:/srv:ro
     depends_on:
       - gitlab
       - nextcloud
-      - filebrowser
     networks: [devops]
 
   gitlab:
@@ -99,17 +99,6 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-    networks: [devops]
-
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: filebrowser
-    restart: unless-stopped
-    user: "0:0"
-    volumes:
-      - /opt/data/filebrowser/srv:/srv
-      - /opt/data/filebrowser/database:/database
-    command: ["--root=/srv", "--database=/database/filebrowser.db", "--address=0.0.0.0", "--port=80"]
     networks: [devops]
 
   gitlab-runner:

@@ -15,5 +15,6 @@ https://cloud.devops.local {
 
 https://files.devops.local {
 	tls internal
-	reverse_proxy filebrowser:80
+	root * /srv
+	file_server browse
 }

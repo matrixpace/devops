@@ -1,28 +1,32 @@
-# AG35 SDK Docker 镜像说明
+# AG35 SDK Docker image
 
-## 概述
+## Overview
 
-本项目用于构建统一的 AG35 SDK 开发镜像（基础镜像：`ubuntu:20.04`），覆盖以下场景：
+This directory builds a single **AG35 SDK** development image (`ubuntu:20.04`) for:
 
-- **Host（x86_64）构建/测试**：CMake 3.30.8、Ninja 1.11、`/opt/googletest`、`lcov-2.3.1`、`cppcheck-2.13.0`、`clang-format-18`、`clang-tidy-18`
-- **AG35 交叉构建**：Quectel 工具链和扩展 SDK 在构建阶段从 `vendor/` 离线包解压到 `/opt/ql_crosstools/`
-- **rootfs/kernel 构建依赖**：镜像内预装 `checkpolicy`、`liblzo2-dev` 等常用依赖
+- **Host (x86_64) build/test**: CMake 3.30.8, Ninja 1.11, `/opt/googletest`, lcov 2.3.1, cppcheck 2.13.0, clang-format-18, clang-tidy-18
+- **AG35 cross builds**: Quectel toolchain and extended SDK unpacked from `vendor/` at build time into `/opt/ql_crosstools/`
+- **rootfs/kernel-style deps**: packages such as `checkpolicy`, `liblzo2-dev`, etc.
 
-镜像默认工作目录为 `/workspace`。
+Default working directory inside the image is `/workspace`.
 
-当前镜像版本信息：
+## Prerequisites (Linux)
+
+The image is often loaded from the devops file site **`https://files.devops.local`**. On the machine that runs `curl` or `docker build`:
+
+1. Resolve **`files.devops.local`** (and other `*.devops.local` names if needed) to the server that serves HTTPS on 443, e.g. append to **`/etc/hosts`**:
+
+```bash
+echo "<SERVER_IP> git.devops.local registry.devops.local cloud.devops.local files.devops.local" | sudo tee -a /etc/hosts
 ```
-AG35SDK tag:        1.0
-Docker image:       ag35sdk:1.0
-Image ID (sha256):  sha256:749ba31893849d1796c56b7d1ff56eb9997b16f063759321a43f0334bb2acf79
-Image created:      2026-04-22T17:32:12.384766631+08:00
-```
 
-## 构建镜像
+2. That host uses **Caddy `tls internal`**. Examples below use **`curl -k`** to skip TLS verification—acceptable only on a **trusted LAN**; do not rely on `-k` on the public internet.
 
-### 1) 准备离线依赖包
+## Build the image
 
-将以下文件放在工程根目录的 `vendor/` 下（文件名需与 `Dockerfile` 一致）：
+### 1) Vendor bundles
+
+Place these under `vendor/` at the **repository root** (names must match the `Dockerfile`):
 
 - [cmake-3.30.8-linux-x86_64.sh](https://github.com/Kitware/CMake/releases/download/v3.30.8/cmake-3.30.8-linux-x86_64.sh)
 - [ninja-linux.zip](https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip)
@@ -32,25 +36,29 @@ Image created:      2026-04-22T17:32:12.384766631+08:00
 - `ql-ag35-le22-gcc640-v1-toolchain.tar.gz`
 - `ql-ol-extsdk-ag35envgmr11a06m4g_ocpu.tar.gz`
 
-### 2) 构建镜像
+### 2) Build
 
 ```bash
-docker build -t ag35sdk:1.0 .
+docker build -t ag35sdk:latest .
 ```
 
-### 3) 导出镜像（可选）
+### 3) Export (optional)
 
 ```bash
-docker save ag35sdk:1.0 | gzip > ag35sdk-1.0.tar.gz
+docker save ag35sdk:latest | gzip > ag35sdk-latest.tar.gz
 ```
 
-## 加载已导出的镜像
+Publish the tarball under the devops file tree so it is visible at a stable URL, e.g. **`/opt/data/files/srv/docker_images/`** on the host maps to **`https://files.devops.local/docker_images/...`**.
+
+## Load a published image
 
 ```bash
-curl -fSL "http://192.168.24.55:8081/docker_images/ag35sdk-1.0.tar.gz" | gunzip | docker load
+curl -kfSL "https://files.devops.local/docker_images/ag35sdk-1.0.tar.gz" | gunzip | docker load
 ```
 
-## 运行示例
+Adjust the path/filename to match what you published under `/opt/data/files/srv/`.
+
+## Run example
 
 ```bash
 docker run --rm -it \
@@ -63,3 +71,4 @@ docker run --rm -it \
   cmake --preset host-debug --fresh
 ```
 
+Stack layout and hosts for **`*.devops.local`**: see the main [README.md](../README.md) in the devops repository.
