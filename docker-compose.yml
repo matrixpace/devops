@@ -1,0 +1,129 @@
+name: devops
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/data/caddy/data:/data
+      - /opt/data/caddy/config:/config
+    depends_on:
+      - gitlab
+      - nextcloud
+      - filebrowser
+    networks: [devops]
+
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    restart: unless-stopped
+    hostname: gitlab
+    shm_size: 512m
+    ports:
+      - "22:22"
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://git.devops.local'
+        registry_external_url 'https://registry.devops.local'
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['gitlab_ssh_host'] = 'git.devops.local'
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+        nginx['redirect_http_to_https'] = false
+        registry_nginx['redirect_http_to_https'] = false
+        registry_nginx['listen_https'] = false
+        letsencrypt['enable'] = false
+        gitlab_rails['trusted_proxies'] = ['172.16.0.0/12', '10.0.0.0/8', '192.168.0.0/16']
+        gitlab_rails['gitlab_force_https'] = false
+        puma['worker_processes'] = 2
+        sidekiq['max_concurrency'] = 10
+        prometheus_monitoring['enable'] = false
+        gitlab_rails['time_zone'] = 'Asia/Shanghai'
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = 'smtp.yeah.net'
+        gitlab_rails['smtp_user_name'] = 'devops_gitlab@yeah.net'
+        gitlab_rails['smtp_password'] = '${GITLAB_SMTP_PASSWORD}'
+        gitlab_rails['smtp_domain'] = 'yeah.net'
+        gitlab_rails['smtp_authentication'] = 'login'
+        gitlab_rails['smtp_port'] = 465
+        gitlab_rails['smtp_tls'] = true
+        gitlab_rails['smtp_enable_starttls_auto'] = false
+        gitlab_rails['gitlab_email_from'] = 'devops_gitlab@yeah.net'
+        gitlab_rails['gitlab_email_reply_to'] = 'devops_gitlab@yeah.net'
+    volumes:
+      - /opt/data/gitlab/config:/etc/gitlab
+      - /opt/data/gitlab/logs:/var/log/gitlab
+      - /opt/data/gitlab/data:/var/opt/gitlab
+    networks: [devops]
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+    volumes:
+      - /opt/data/nextcloud/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [devops]
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    environment:
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_HOST: mariadb
+      NEXTCLOUD_TRUSTED_DOMAINS: cloud.devops.local
+      OVERWRITEPROTOCOL: https
+      OVERWRITEHOST: cloud.devops.local
+      OVERWRITECLIENTPROTO: "1"
+    volumes:
+      - /opt/data/nextcloud/html:/var/www/html
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks: [devops]
+
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: filebrowser
+    restart: unless-stopped
+    user: "0:0"
+    volumes:
+      - /opt/data/filebrowser/srv:/srv
+      - /opt/data/filebrowser/database:/database
+    command: ["--root=/srv", "--database=/database/filebrowser.db", "--address=0.0.0.0", "--port=80"]
+    networks: [devops]
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: unless-stopped
+    volumes:
+      - /opt/data/gitlab-runner:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "git.devops.local:host-gateway"
+      - "registry.devops.local:host-gateway"
+    networks: [devops]
+
+networks:
+  devops:
+    name: devops
