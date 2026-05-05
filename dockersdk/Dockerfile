@@ -34,8 +34,17 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.tuna.tsinghua.edu.
     liblzo2-dev \
     clang-tidy-18 \
     clang-format-18 \
+    openssh-client \
+    sudo \
     && [ -f /usr/bin/clang-format-18 ] && ln -sf /usr/bin/clang-format-18 /usr/bin/clang-format \
     && [ -f /usr/bin/clang-tidy-18 ] && ln -sf /usr/bin/clang-tidy-18 /usr/bin/clang-tidy \
+    && printf '%s\n' \
+       '# passwd may be host-mounted without a matching /etc/shadow line; skip PAM account checks.' \
+       'Defaults !pam_acct_mgmt' \
+       'ALL ALL=(root) NOPASSWD: /usr/bin/apt, /usr/bin/apt-get, /usr/bin/dpkg, /usr/bin/dpkg-deb, /usr/bin/dpkg-query, /usr/bin/dpkg-reconfigure' \
+       > /etc/sudoers.d/010-nopasswd-apt \
+    && chmod 0440 /etc/sudoers.d/010-nopasswd-apt \
+    && visudo -cf /etc/sudoers.d/010-nopasswd-apt \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /bin/bash /bin/sh \
