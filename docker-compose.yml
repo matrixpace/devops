@@ -7,7 +7,6 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /opt/data/caddy/data:/data
@@ -28,15 +27,12 @@ services:
       - "22:22"
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://git.devops.local'
-        registry_external_url 'https://registry.devops.local'
-        gitlab_rails['registry_enabled'] = true
+        external_url 'http://git.devops.local'
+        gitlab_rails['registry_enabled'] = false
         gitlab_rails['gitlab_ssh_host'] = 'git.devops.local'
         nginx['listen_port'] = 80
         nginx['listen_https'] = false
         nginx['redirect_http_to_https'] = false
-        registry_nginx['redirect_http_to_https'] = false
-        registry_nginx['listen_https'] = false
         letsencrypt['enable'] = false
         gitlab_rails['trusted_proxies'] = ['172.16.0.0/12', '10.0.0.0/8', '192.168.0.0/16']
         gitlab_rails['gitlab_force_https'] = false
@@ -91,7 +87,7 @@ services:
       MYSQL_USER: nextcloud
       MYSQL_HOST: mariadb
       NEXTCLOUD_TRUSTED_DOMAINS: cloud.devops.local
-      OVERWRITEPROTOCOL: https
+      OVERWRITEPROTOCOL: http
       OVERWRITEHOST: cloud.devops.local
       OVERWRITECLIENTPROTO: "1"
     volumes:
@@ -110,7 +106,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     extra_hosts:
       - "git.devops.local:host-gateway"
-      - "registry.devops.local:host-gateway"
     networks: [devops]
 
 networks:
