@@ -1,61 +1,62 @@
 # DevOps stack (Docker Compose)
 
-**Caddy** (HTTP reverse proxy on port 80), **GitLab**, **Nextcloud**, and **directory/file sharing** at `files.devops.local` (Caddy `file_server browse`, read-only tree—**no login**; use only on a **trusted network**). Hostnames are **`*.devops.local`**. Data lives under **`/opt/data`** (see [docker-compose.yml](docker-compose.yml)).
+**Caddy** on port **80** (reverse proxy), **GitLab**, **Nextcloud**, and **read-only directory browse** at `files.devops.local` (**no login**—trusted LAN only). Hostnames: **`*.devops.local`**. Persistent data: **`/opt/data`** (see [docker-compose.yml](docker-compose.yml)).
 
-Traffic is **plain HTTP** on the LAN: no TLS certificate setup on clients. **Do not expose port 80 to the public internet** without adding TLS or a VPN in front.
+LAN uses **plain HTTP**; **do not** expose port 80 to the public internet without TLS or a VPN in front.
 
 ---
 
 ## Deployment
 
-### 1. Secrets
+### 1. Secrets (`.env` location)
 
-Copy [`.env.example`](.env.example) to **`.env` in the same directory as `docker-compose.yml`**, then set `MYSQL_*` and `GITLAB_SMTP_PASSWORD`.
+Copy [`.env.example`](.env.example) to **`.env` in the same directory as `docker-compose.yml`** (the Compose project root).
+
+**Why here:** Compose loads this file automatically for variable substitution and for services that reference `${VAR}`. After a **host reboot**, `docker compose up -d` (or a systemd unit with `WorkingDirectory` set to this folder) will again see those variables—**no** manual `source .env` step. If `.env` lives elsewhere, you must export variables yourself each time.
 
 ```bash
 cp .env.example .env
+# edit: MYSQL_*, GITLAB_SMTP_PASSWORD, etc.
 ```
 
-### 2. Data directory (permissions)
+### 2. Data directory
 
-Create the tree once; own it as the user that runs `docker compose` so bind mounts work without fighting root-owned files under `/opt/data`:
+Create once; own as the user that runs Compose so bind mounts stay writable:
 
 ```bash
 sudo mkdir -p /opt/data
 sudo chown "$USER:$USER" /opt/data
-# mkdir -p /opt/data/{caddy/data,caddy/config,gitlab/{config,logs,data},nextcloud/{mysql,html},files/srv,gitlab-runner}
 ```
 
 ### 3. Start
 
 ```bash
-set -a && . .env && set +a
 docker compose up -d
 ```
 
-### 4. Local DNS (hosts)
+### 4. Local DNS
 
-Replace `<SERVER_IP>` with the machine that serves port **80** for this stack.
+Point **`*.devops.local`** at the machine that serves port **80** (`<SERVER_IP>`).
 
-**Windows** (run `CMD` as Administrator):
+**Windows** (Administrator `CMD`):
 
 ```bat
 echo <SERVER_IP> git.devops.local cloud.devops.local files.devops.local >> C:\Windows\System32\drivers\etc\hosts
 ```
 
-*127.0.0.1 in WSL localhost mode*
-
-**Linux** (append to `/etc/hosts`):
+**Linux** (`/etc/hosts`):
 
 ```bash
 echo "<SERVER_IP> git.devops.local cloud.devops.local files.devops.local" | sudo tee -a /etc/hosts
 ```
 
+*(WSL hitting Windows browser: use the host IP that reaches this stack, not necessarily `127.0.0.1`.)*
+
 ### 5. URLs
 
-- `http://git.devops.local`
-- `http://cloud.devops.local`
-- `http://files.devops.local`
+- `http://git.devops.local` — GitLab  
+- `http://cloud.devops.local` — Nextcloud  
+- `http://files.devops.local` — file browse
 
 ---
 
@@ -63,7 +64,7 @@ echo "<SERVER_IP> git.devops.local cloud.devops.local files.devops.local" | sudo
 
 ### GitLab Runner (HTTP)
 
-**Register** (replace token/name as needed):
+Register (adjust token, name, image as needed):
 
 ```bash
 export GITLAB_RUNNER_TOKEN=
@@ -85,11 +86,12 @@ docker exec -it gitlab-runner gitlab-runner register \
   --clone-url "http://git.devops.local"
 ```
 
+*To raise parallelism, edit `concurrent` in `/opt/data/gitlab-runner/config.toml`.*
 
 ### Backup and migration
 
-**State:** this repo (Compose + [Caddyfile](Caddyfile)), **`.env`**, and **`/opt/data`** (GitLab, DB, Nextcloud, Caddy, Runner, etc.).
+**State:** this repo (Compose + [Caddyfile](Caddyfile)), **`.env`** beside `docker-compose.yml`, and **`/opt/data`**.
 
-**Backup:** `docker compose down`, then archive the repo, `.env`, and **`/opt/data`** (e.g. `sudo tar -C /opt -czf devops-data.tgz data`).
+**Backup:** `docker compose down`, then archive repo, `.env`, and `/opt/data` (e.g. `sudo tar -C /opt -czf devops-data.tgz data`).
 
-**Restore or move server (whole package):** restore **`/opt/data` to `/opt/data`** as one tree, place repo + `.env` beside `docker-compose.yml`, `chown` like step 2, point **DNS or `hosts`** for `*.devops.local` at the new IP if the machine changed, then `docker compose up -d`.
+**Restore / new host:** restore **`/opt/data`** as one tree, clone repo with `.env` next to `docker-compose.yml`, `chown` like step 2, update **DNS or `hosts`** if the IP changed, then `docker compose up -d`.

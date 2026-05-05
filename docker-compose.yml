@@ -101,6 +101,8 @@ services:
     image: gitlab/gitlab-runner:latest
     container_name: gitlab-runner
     restart: unless-stopped
+    depends_on:
+      - gitlab
     volumes:
       - /opt/data/gitlab-runner:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
