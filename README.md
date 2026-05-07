@@ -1,6 +1,6 @@
 # DevOps stack (Docker Compose)
 
-**Caddy** on port **80** (reverse proxy), **GitLab**, **Nextcloud**, and **read-only directory browse** at `files.devops.local` (**no login**—trusted LAN only). Hostnames: **`*.devops.local`**. Persistent data: **`/opt/data`** (see [docker-compose.yml](docker-compose.yml)).
+**Caddy** on port **80** (reverse proxy), **GitLab**, **Nextcloud**, and **read-only browse for published releases** at `release.devops.local` (**no login**—trusted LAN only). Hostnames: **`*.devops.local`**. Persistent data: **`/opt/data`** (see [docker-compose.yml](docker-compose.yml)).
 
 LAN uses **plain HTTP**; **do not** expose port 80 to the public internet without TLS or a VPN in front.
 
@@ -41,13 +41,13 @@ Point **`*.devops.local`** at the machine that serves port **80** (`<SERVER_IP>`
 **Windows** (Administrator `CMD`):
 
 ```bat
-echo <SERVER_IP> git.devops.local cloud.devops.local files.devops.local >> C:\Windows\System32\drivers\etc\hosts
+echo <SERVER_IP> git.devops.local cloud.devops.local release.devops.local >> C:\Windows\System32\drivers\etc\hosts
 ```
 
 **Linux** (`/etc/hosts`):
 
 ```bash
-echo "<SERVER_IP> git.devops.local cloud.devops.local files.devops.local" | sudo tee -a /etc/hosts
+echo "<SERVER_IP> git.devops.local cloud.devops.local release.devops.local" | sudo tee -a /etc/hosts
 ```
 
 *(WSL hitting Windows browser: use the host IP that reaches this stack, not necessarily `127.0.0.1`.)*
@@ -56,7 +56,7 @@ echo "<SERVER_IP> git.devops.local cloud.devops.local files.devops.local" | sudo
 
 - `http://git.devops.local` — GitLab  
 - `http://cloud.devops.local` — Nextcloud  
-- `http://files.devops.local` — file browse
+- `http://release.devops.local` — Release
 
 ---
 
@@ -79,8 +79,9 @@ docker exec -it gitlab-runner gitlab-runner register \
   --docker-volumes "/cache" \
   --docker-volumes "/var/run/docker.sock:/var/run/docker.sock" \
   --docker-volumes "/builds:/builds" \
-  --docker-volumes "/opt/data/files/srv:/srv:rw" \
+  --docker-volumes "/opt/data/release/srv:/srv:rw" \
   --docker-extra-hosts "git.devops.local:host-gateway" \
+  --docker-extra-hosts "release.devops.local:host-gateway" \
   --docker-pull-policy "never" \
   --docker-network-mode "devops" \
   --clone-url "http://git.devops.local"

@@ -10,7 +10,7 @@ http://cloud.devops.local {
 	reverse_proxy nextcloud:80
 }
 
-http://files.devops.local {
+http://release.devops.local {
 	root * /srv
 	file_server browse
 }

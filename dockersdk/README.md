@@ -12,12 +12,12 @@ Default working directory inside the image is `/workspace`.
 
 ## Prerequisites (Linux)
 
-The image is often loaded from the devops file site **`http://files.devops.local`**. On the machine that runs `curl` or `docker build`:
+The image is often loaded from the devops release site **`http://release.devops.local`**. On the machine that runs `curl` or `docker build`:
 
-1. Resolve **`files.devops.local`** (and other `*.devops.local` names if needed) to the server that serves **HTTP on port 80**, e.g. append to **`/etc/hosts`**:
+1. Resolve **`release.devops.local`** (and other `*.devops.local` names if needed) to the server that serves **HTTP on port 80**, e.g. append to **`/etc/hosts`**:
 
 ```bash
-echo "<SERVER_IP> git.devops.local cloud.devops.local files.devops.local" | sudo tee -a /etc/hosts
+echo "<SERVER_IP> git.devops.local cloud.devops.local release.devops.local" | sudo tee -a /etc/hosts
 ```
 
 2. Use this only on a **trusted LAN**; the devops stack serves **plain HTTP** (no client TLS setup).
@@ -48,15 +48,15 @@ docker build -t ag35sdk:latest .
 docker save ag35sdk:latest | gzip > ag35sdk-latest.tar.gz
 ```
 
-Publish the tarball under the devops file tree so it is visible at a stable URL, e.g. **`/opt/data/files/srv/docker_images/`** on the host maps to **`http://files.devops.local/docker_images/...`**.
+Publish the tarball under the devops release tree so it is visible at a stable URL, e.g. **`/opt/data/release/srv/images/`** on the host maps to **`http://release.devops.local/images/...`**.
 
 ## Load a published image
 
 ```bash
-curl -fSL "http://files.devops.local/docker_images/ag35sdk-1.0.tar.gz" | gunzip | docker load
+curl -fSL "http://release.devops.local/images/ag35sdk-1.0.tar.gz" | gunzip | docker load
 ```
 
-Adjust the path/filename to match what you published under `/opt/data/files/srv/`.
+Adjust the path/filename to match what you published under `/opt/data/release/srv/`.
 
 ## Run example
 

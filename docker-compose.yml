@@ -11,7 +11,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /opt/data/caddy/data:/data
       - /opt/data/caddy/config:/config
-      - /opt/data/files/srv:/srv:ro
+      - /opt/data/release/srv:/srv:ro
     depends_on:
       - gitlab
       - nextcloud
